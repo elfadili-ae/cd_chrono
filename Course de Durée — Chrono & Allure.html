@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Course de Durée — Chrono & Allure</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root{
+    --track: #BD3B1F;
+    --track-dark: #8f2c17;
+    --grass: #2F7A4F;
+    --ink: #1F2A3C;
+    --ink-soft: #4A5568;
+    --chalk: #F7F5F1;
+    --line: #E3DED3;
+    --danger: #A33131;
+    --white: #ffffff;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--chalk);color:var(--ink);font-family:'Barlow',sans-serif;-webkit-tap-highlight-color:transparent;}
+  h1,h2,h3,.num{font-family:'Barlow Condensed',sans-serif;}
+  button{font-family:inherit;cursor:pointer;}
+
+  /* ===== Header / Tabs ===== */
+  header{
+    background:var(--ink);
+    color:var(--white);
+    padding: calc(14px + env(safe-area-inset-top,0px)) 20px 14px;
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+    border-bottom: 4px solid var(--track);
+  }
+  header h1{
+    margin:0; font-size:28px; font-weight:800; letter-spacing:0.3px; line-height:1;
+  }
+  header h1 span{color:var(--track); }
+  nav.tabs{display:flex; gap:6px; background:rgba(255,255,255,0.08); padding:4px; border-radius:10px;}
+  nav.tabs button{
+    background:transparent; border:none; color:#cfd4dc; font-size:17px; font-weight:600;
+    padding:9px 18px; border-radius:8px; transition:background .15s, color .15s;
+  }
+  nav.tabs button.active{background:var(--track); color:#fff;}
+
+  main{max-width:1200px; margin:0 auto; padding:20px 16px 60px;}
+  .page{display:none;}
+  .page.active{display:block;}
+
+  /* ===== Cards ===== */
+  .card{
+    background:var(--white); border:1px solid var(--line); border-radius:14px;
+    padding:18px 20px; margin-bottom:18px;
+  }
+  .card h2{margin:0 0 14px; font-size:22px; font-weight:700; color:var(--ink); display:flex; align-items:center; gap:8px;}
+  .card h2 .dot{width:10px;height:10px;border-radius:50%;background:var(--track); display:inline-block;}
+
+  .row{display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end;}
+  .field{display:flex; flex-direction:column; gap:5px;}
+  .field label{font-size:13px; font-weight:600; color:var(--ink-soft); text-transform:none;}
+  .field input, .field select{
+    font-size:17px; padding:9px 12px; border:1.5px solid var(--line); border-radius:8px;
+    background:#fff; color:var(--ink); min-width:120px;
+  }
+  .field input:focus, .field select:focus{outline:2px solid var(--track); outline-offset:1px; border-color:var(--track);}
+
+  /* ===== Chrono top bar ===== */
+  .chrono-bar{
+    display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;
+  }
+  .clock{
+    font-size:52px; font-weight:800; letter-spacing:1px; color:var(--ink); font-variant-numeric:tabular-nums;
+    min-width:220px;
+  }
+  .chrono-controls{display:flex; gap:10px; flex-wrap:wrap;}
+  .btn{
+    border:none; border-radius:10px; padding:13px 22px; font-size:17px; font-weight:700; color:#fff;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.15);
+  }
+  .btn:active{transform:translateY(1px); box-shadow:none;}
+  .btn-start{background:var(--grass);}
+  .btn-stop{background:var(--danger);}
+  .btn-reset{background:var(--ink-soft);}
+  .btn-add{background:var(--grass);}
+  .btn-export{background:var(--track);}
+  .btn-small{padding:8px 14px; font-size:15px; border-radius:8px;}
+
+  /* ===== Runner add form ===== */
+  .add-runner-form{display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;}
+  input[type=color]{
+    width:52px; height:44px; padding:2px; border:1.5px solid var(--line); border-radius:8px; background:#fff;
+  }
+
+  .runner-manage-list{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;}
+  .chip{
+    display:flex; align-items:center; gap:8px; background:var(--chalk); border:1.5px solid var(--line);
+    border-radius:999px; padding:6px 8px 6px 12px; font-weight:600; font-size:15px;
+  }
+  .chip .swatch{width:14px;height:14px;border-radius:50%; flex-shrink:0;}
+  .chip button{
+    background:var(--danger); color:#fff; border:none; width:22px; height:22px; border-radius:50%;
+    font-size:14px; line-height:1; display:flex; align-items:center; justify-content:center;
+  }
+
+  /* ===== Runner tap grid ===== */
+  .runner-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:14px;
+  }
+  .runner-btn{
+    border-radius:16px; padding:18px 10px 14px; text-align:center; color:#fff; border:none;
+    display:flex; flex-direction:column; align-items:center; gap:6px; min-height:132px; justify-content:center;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.22);
+    transition: transform .08s;
+  }
+  .runner-btn:active{transform:scale(0.96); box-shadow:none; translate:0 3px;}
+  .runner-btn .name{font-size:20px; font-weight:800; font-family:'Barlow Condensed',sans-serif; letter-spacing:.3px; word-break:break-word;}
+  .runner-btn .lapcount{font-size:13px; opacity:0.9; font-weight:600;}
+  .runner-btn .lasttime{font-size:22px; font-weight:800; font-variant-numeric:tabular-nums;}
+  .runner-btn .hint{font-size:11px; opacity:0.8;}
+  .empty-hint{color:var(--ink-soft); font-size:15px; padding:10px 2px;}
+
+  /* ===== Results table ===== */
+  .table-wrap{overflow-x:auto;}
+  table{border-collapse:collapse; width:100%; min-width:480px;}
+  th,td{padding:9px 12px; text-align:center; border-bottom:1px solid var(--line); font-size:15px; white-space:nowrap;}
+  th{background:var(--ink); color:#fff; font-weight:700; position:sticky; top:0;}
+  tbody tr:nth-child(odd){background:#fbfaf7;}
+  td.runner-name{text-align:left; font-weight:700; display:flex; align-items:center; gap:8px;}
+  td.runner-name .swatch{width:12px;height:12px;border-radius:50%; flex-shrink:0;}
+
+  /* ===== Allure page ===== */
+  .allure-grid{display:grid; grid-template-columns: 1fr 1fr; gap:20px;}
+  @media (max-width:720px){ .allure-grid{grid-template-columns:1fr;} }
+  .result-big{
+    background:var(--ink); color:#fff; border-radius:14px; padding:22px; text-align:center;
+  }
+  .result-big .label{font-size:14px; color:#b9c0cc; font-weight:600; margin-bottom:6px;}
+  .result-big .value{font-size:46px; font-weight:800; color:var(--track); font-variant-numeric:tabular-nums;}
+  .result-big .sub{font-size:14px; color:#cfd4dc; margin-top:4px;}
+  .pct-buttons{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
+  .pct-buttons button{
+    border:1.5px solid var(--line); background:#fff; border-radius:8px; padding:7px 12px; font-weight:700; font-size:14px;
+  }
+  .pct-buttons button.active{background:var(--track); color:#fff; border-color:var(--track);}
+  .allure-table th, .allure-table td{font-size:14px;}
+
+  footer{text-align:center; color:var(--ink-soft); font-size:13px; padding:16px; opacity:.7;}
+
+  @media (prefers-color-scheme: dark){
+    /* Kept light intentionally: designed for outdoor/gym visibility on any screen setting */
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Course de <span>Durée</span></h1>
+  <nav class="tabs">
+    <button class="tab-btn active" data-page="chrono">⏱ Chrono</button>
+    <button class="tab-btn" data-page="allure">📐 Allure VMA</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ===================== PAGE CHRONO ===================== -->
+  <section id="page-chrono" class="page active">
+
+    <div class="card">
+      <h2><span class="dot"></span>Paramètres de la séance</h2>
+      <div class="row">
+        <div class="field">
+          <label for="distField">Distance (m)</label>
+          <input type="number" id="distField" placeholder="ex: 300" min="0" step="10">
+        </div>
+        <div class="field">
+          <label for="classField">Classe</label>
+          <input type="text" id="classField" placeholder="ex: 3ème B">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="dot"></span>Chronomètre</h2>
+      <div class="chrono-bar">
+        <div class="clock" id="clockDisplay">00:00.0</div>
+        <div class="chrono-controls">
+          <button class="btn btn-start" id="startBtn">▶ Démarrer</button>
+          <button class="btn btn-stop" id="stopBtn">⏸ Pause</button>
+          <button class="btn btn-reset" id="resetBtn">↺ Réinitialiser</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="dot"></span>Coureurs</h2>
+      <div class="add-runner-form">
+        <div class="field">
+          <label for="runnerNameInput">Nom du coureur</label>
+          <input type="text" id="runnerNameInput" placeholder="ex: Ali">
+        </div>
+        <div class="field">
+          <label for="runnerColorInput">Couleur</label>
+          <input type="color" id="runnerColorInput" value="#2F7A4F">
+        </div>
+        <button class="btn btn-add" id="addRunnerBtn">+ Ajouter</button>
+      </div>
+      <div class="runner-manage-list" id="runnerManageList"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="dot"></span>Enregistrer un tour <span style="font-size:14px; font-weight:500; color:var(--ink-soft);">— touchez le coureur à chaque passage</span></h2>
+      <div class="runner-grid" id="runnerGrid"></div>
+      <div class="empty-hint" id="emptyHint">Ajoutez des coureurs ci-dessus pour commencer.</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="dot"></span>Résultats</h2>
+      <div class="table-wrap">
+        <table id="resultsTable">
+          <thead><tr id="resultsHeadRow"><th>Coureur</th><th>Temps total</th></tr></thead>
+          <tbody id="resultsBody"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:16px;">
+        <button class="btn btn-export" id="exportPdfBtn">⬇ Exporter en PDF</button>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ===================== PAGE ALLURE ===================== -->
+  <section id="page-allure" class="page">
+
+    <div class="card">
+      <h2><span class="dot"></span>Calculer l'allure d'entraînement</h2>
+      <div class="row">
+        <div class="field">
+          <label for="vmaInput">VMA (km/h)</label>
+          <input type="number" id="vmaInput" placeholder="ex: 14" min="0" step="0.1">
+        </div>
+        <div class="field">
+          <label for="pisteInput">Distance du tour de piste (m)</label>
+          <input type="number" id="pisteInput" placeholder="ex: 400" min="0" step="10">
+        </div>
+      </div>
+      <div class="field" style="margin-top:14px;">
+        <label>Pourcentage de VMA</label>
+        <div class="pct-buttons" id="pctButtons">
+          <button data-pct="60">60%</button>
+          <button data-pct="70">70%</button>
+          <button data-pct="80" class="active">80%</button>
+          <button data-pct="90">90%</button>
+          <button data-pct="100">100%</button>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div class="field">
+          <label for="pctCustom">% personnalisé</label>
+          <input type="number" id="pctCustom" placeholder="ex: 85" min="1" max="150" step="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="allure-grid">
+      <div class="result-big">
+        <div class="label">Allure de course</div>
+        <div class="value" id="paceValue">--:--</div>
+        <div class="sub">min / km</div>
+      </div>
+      <div class="result-big">
+        <div class="label">Temps par tour de piste</div>
+        <div class="value" id="lapValue">--:--</div>
+        <div class="sub" id="lapSub">min : sec</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <h2><span class="dot"></span>Temps cumulé par tour</h2>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Mode de calcul</label>
+        <div class="pct-buttons" id="cumulModeButtons">
+          <button data-mode="distance" class="active">📏 Distance totale</button>
+          <button data-mode="duree">⏱ Durée (secondes)</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field" id="distTotaleField">
+          <label for="distTotaleInput">Distance totale de la course (m)</label>
+          <input type="number" id="distTotaleInput" placeholder="ex: 3000" min="0" step="50">
+        </div>
+        <div class="field" id="dureeTotaleField" style="display:none;">
+          <label for="dureeTotaleInput">Durée totale de la course (secondes)</label>
+          <input type="number" id="dureeTotaleInput" placeholder="ex: 900" min="0" step="10">
+        </div>
+        <div class="field">
+          <label>Nombre de tours</label>
+          <input type="text" id="nbToursDisplay" disabled style="background:var(--chalk); font-weight:700;">
+        </div>
+      </div>
+      <div class="table-wrap" style="margin-top:12px;">
+        <table class="allure-table" id="cumulTable">
+          <thead><tr><th>Tour</th><th>Temps du tour</th><th>Temps cumulé</th><th>Distance cumulée</th></tr></thead>
+          <tbody id="cumulTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <h2><span class="dot"></span>Table de référence rapide</h2>
+      <div class="table-wrap">
+        <table class="allure-table" id="refTable">
+          <thead><tr><th>% VMA</th><th>Vitesse (km/h)</th><th>Allure (min/km)</th><th>Temps / tour piste</th></tr></thead>
+          <tbody id="refTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+</main>
+
+<footer>Outil pédagogique — course de durée · à utiliser sur le terrain</footer>
+
+<script>
+/* ================= TABS ================= */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('page-'+btn.dataset.page).classList.add('active');
+  });
+});
+
+/* ================= CHRONO STATE ================= */
+let runners = []; // {id, name, color, laps:[ms...], lastTapAbs}
+let runnerCounter = 0;
+let stopwatchStart = null;
+let stopwatchElapsed = 0; // ms accumulated while paused
+let running = false;
+let tickHandle = null;
+
+const clockDisplay = document.getElementById('clockDisplay');
+const runnerGrid = document.getElementById('runnerGrid');
+const runnerManageList = document.getElementById('runnerManageList');
+const emptyHint = document.getElementById('emptyHint');
+const resultsHeadRow = document.getElementById('resultsHeadRow');
+const resultsBody = document.getElementById('resultsBody');
+
+function formatTime(ms){
+  if(ms==null) return '--';
+  const totalSec = ms/1000;
+  const m = Math.floor(totalSec/60);
+  const s = totalSec - m*60;
+  return String(m).padStart(2,'0')+':'+s.toFixed(1).padStart(4,'0');
+}
+
+function currentElapsed(){
+  if(running) return stopwatchElapsed + (Date.now() - stopwatchStart);
+  return stopwatchElapsed;
+}
+
+function updateClock(){
+  clockDisplay.textContent = formatTime(currentElapsed());
+}
+
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  if(running) return;
+  running = true;
+  stopwatchStart = Date.now();
+  tickHandle = setInterval(updateClock, 100);
+});
+document.getElementById('stopBtn').addEventListener('click', ()=>{
+  if(!running) return;
+  stopwatchElapsed += Date.now() - stopwatchStart;
+  running = false;
+  clearInterval(tickHandle);
+  updateClock();
+});
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  if(!confirm('Réinitialiser le chrono et effacer tous les temps enregistrés ?')) return;
+  running = false;
+  clearInterval(tickHandle);
+  stopwatchElapsed = 0;
+  stopwatchStart = null;
+  runners.forEach(r=>{ r.laps = []; r.lastTapAbs = null; });
+  updateClock();
+  renderRunnerGrid();
+  renderResultsTable();
+});
+
+/* ================= RUNNER MANAGEMENT ================= */
+document.getElementById('addRunnerBtn').addEventListener('click', addRunner);
+document.getElementById('runnerNameInput').addEventListener('keydown', e=>{ if(e.key==='Enter') addRunner(); });
+
+function addRunner(){
+  const nameInput = document.getElementById('runnerNameInput');
+  const colorInput = document.getElementById('runnerColorInput');
+  const name = nameInput.value.trim();
+  if(!name){ nameInput.focus(); return; }
+  runnerCounter++;
+  runners.push({ id:'r'+runnerCounter, name, color: colorInput.value, laps: [], lastTapAbs: null });
+  nameInput.value='';
+  // cycle a new default color a bit
+  renderRunnerManageList();
+  renderRunnerGrid();
+  renderResultsTable();
+}
+
+function removeRunner(id){
+  runners = runners.filter(r=>r.id!==id);
+  renderRunnerManageList();
+  renderRunnerGrid();
+  renderResultsTable();
+}
+
+function renderRunnerManageList(){
+  runnerManageList.innerHTML = '';
+  runners.forEach(r=>{
+    const chip = document.createElement('div');
+    chip.className='chip';
+    chip.innerHTML = `<span class="swatch" style="background:${r.color}"></span>${escapeHtml(r.name)}`;
+    const delBtn = document.createElement('button');
+    delBtn.textContent='×';
+    delBtn.title='Supprimer '+r.name;
+    delBtn.addEventListener('click', ()=>removeRunner(r.id));
+    chip.appendChild(delBtn);
+    runnerManageList.appendChild(chip);
+  });
+}
+
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ================= RUNNER TAP GRID ================= */
+function renderRunnerGrid(){
+  runnerGrid.innerHTML = '';
+  emptyHint.style.display = runners.length ? 'none' : 'block';
+  runners.forEach(r=>{
+    const btn = document.createElement('button');
+    btn.className='runner-btn';
+    btn.style.background = r.color;
+    const lastLap = r.laps.length ? r.laps[r.laps.length-1] : null;
+    btn.innerHTML = `
+      <div class="name">${escapeHtml(r.name)}</div>
+      <div class="lasttime">${lastLap!=null ? formatTime(lastLap) : '--:--'}</div>
+      <div class="lapcount">${r.laps.length} tour${r.laps.length>1?'s':''}</div>
+      <div class="hint">toucher pour enregistrer</div>
+    `;
+    btn.addEventListener('click', ()=>recordLap(r.id));
+    runnerGrid.appendChild(btn);
+  });
+}
+
+function recordLap(id){
+  if(!running && currentElapsed()===0){
+    // allow tapping even if not started? require running for meaningful data
+  }
+  const r = runners.find(x=>x.id===id);
+  if(!r) return;
+  const now = currentElapsed();
+  const lapTime = r.lastTapAbs==null ? now : (now - r.lastTapAbs);
+  r.laps.push(lapTime);
+  r.lastTapAbs = now;
+  renderRunnerGrid();
+  renderResultsTable();
+}
+
+/* ================= RESULTS TABLE ================= */
+function maxLaps(){
+  return runners.reduce((m,r)=>Math.max(m,r.laps.length),0);
+}
+
+function renderResultsTable(){
+  const n = maxLaps();
+  // head
+  resultsHeadRow.innerHTML = '<th>Coureur</th>';
+  for(let i=1;i<=n;i++){
+    const th = document.createElement('th');
+    th.textContent = 'Tour '+i;
+    resultsHeadRow.appendChild(th);
+  }
+  const thTotal = document.createElement('th');
+  thTotal.textContent = 'Temps total';
+  resultsHeadRow.appendChild(thTotal);
+
+  // body
+  resultsBody.innerHTML = '';
+  runners.forEach(r=>{
+    const tr = document.createElement('tr');
+    const tdName = document.createElement('td');
+    tdName.className='runner-name';
+    tdName.innerHTML = `<span class="swatch" style="background:${r.color}"></span>${escapeHtml(r.name)}`;
+    tr.appendChild(tdName);
+    for(let i=0;i<n;i++){
+      const td = document.createElement('td');
+      td.textContent = r.laps[i]!=null ? formatTime(r.laps[i]) : '—';
+      tr.appendChild(td);
+    }
+    const total = r.laps.reduce((a,b)=>a+b,0);
+    const tdTotal = document.createElement('td');
+    tdTotal.style.fontWeight='700';
+    tdTotal.textContent = r.laps.length ? formatTime(total) : '—';
+    tr.appendChild(tdTotal);
+    resultsBody.appendChild(tr);
+  });
+}
+
+/* ================= PDF EXPORT ================= */
+document.getElementById('exportPdfBtn').addEventListener('click', exportPdf);
+
+function exportPdf(){
+  if(!runners.length){ alert("Ajoutez au moins un coureur avant d'exporter."); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'landscape'});
+  const dist = document.getElementById('distField').value || '—';
+  const classe = document.getElementById('classField').value || '—';
+  const dateStr = new Date().toLocaleDateString('fr-FR');
+
+  doc.setFontSize(18);
+  doc.text('Course de durée — Résultats', 14, 16);
+  doc.setFontSize(11);
+  doc.text(`Classe : ${classe}    Distance : ${dist} m    Date : ${dateStr}`, 14, 24);
+
+  const n = maxLaps();
+  const head = [['Coureur', ...Array.from({length:n},(_,i)=>'Tour '+(i+1)), 'Temps total']];
+  const body = runners.map(r=>{
+    const laps = Array.from({length:n},(_,i)=> r.laps[i]!=null ? formatTime(r.laps[i]) : '—');
+    const total = r.laps.length ? formatTime(r.laps.reduce((a,b)=>a+b,0)) : '—';
+    return [r.name, ...laps, total];
+  });
+
+  doc.autoTable({
+    head, body, startY: 30,
+    headStyles:{ fillColor:[31,42,60] },
+    styles:{ fontSize:10, halign:'center' },
+    columnStyles:{ 0:{ halign:'left', fontStyle:'bold' } }
+  });
+
+  doc.save(`course-duree_${classe||'classe'}_${dateStr.replace(/\//g,'-')}.pdf`);
+}
+
+/* ================= ALLURE PAGE ================= */
+const vmaInput = document.getElementById('vmaInput');
+const pisteInput = document.getElementById('pisteInput');
+const pctButtons = document.getElementById('pctButtons');
+const pctCustom = document.getElementById('pctCustom');
+const paceValue = document.getElementById('paceValue');
+const lapValue = document.getElementById('lapValue');
+const lapSub = document.getElementById('lapSub');
+const refTableBody = document.getElementById('refTableBody');
+const nbToursDisplay = document.getElementById('nbToursDisplay');
+const distTotaleInput = document.getElementById('distTotaleInput');
+const dureeTotaleInput = document.getElementById('dureeTotaleInput');
+const distTotaleField = document.getElementById('distTotaleField');
+const dureeTotaleField = document.getElementById('dureeTotaleField');
+const cumulModeButtons = document.getElementById('cumulModeButtons');
+const cumulTableBody = document.getElementById('cumulTableBody');
+
+let currentPct = 80;
+let cumulMode = 'distance';
+
+cumulModeButtons.querySelectorAll('button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    cumulMode = btn.dataset.mode;
+    cumulModeButtons.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    distTotaleField.style.display = cumulMode==='distance' ? 'flex' : 'none';
+    dureeTotaleField.style.display = cumulMode==='duree' ? 'flex' : 'none';
+    computeAllure();
+  });
+});
+
+distTotaleInput.addEventListener('input', computeAllure);
+dureeTotaleInput.addEventListener('input', computeAllure);
+
+pctButtons.querySelectorAll('button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    currentPct = parseFloat(btn.dataset.pct);
+    pctCustom.value='';
+    pctButtons.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    computeAllure();
+  });
+});
+pctCustom.addEventListener('input', ()=>{
+  if(pctCustom.value){
+    currentPct = parseFloat(pctCustom.value);
+    pctButtons.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+  }
+  computeAllure();
+});
+vmaInput.addEventListener('input', computeAllure);
+pisteInput.addEventListener('input', computeAllure);
+
+function fmtMinSec(totalSeconds){
+  if(!isFinite(totalSeconds) || totalSeconds<=0) return '--:--';
+  const m = Math.floor(totalSeconds/60);
+  const s = Math.round(totalSeconds - m*60);
+  if(s===60) return String(m+1).padStart(2,'0')+':00';
+  return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+
+function computeAllure(){
+  const vma = parseFloat(vmaInput.value);
+  const piste = parseFloat(pisteInput.value);
+  const pct = currentPct;
+
+  if(!vma || vma<=0 || !pct){
+    paceValue.textContent='--:--';
+    lapValue.textContent='--:--';
+    refTableBody.innerHTML='';
+    cumulTableBody.innerHTML='';
+    return;
+  }
+  const speed = vma * pct / 100; // km/h
+  const paceSecPerKm = 3600 / speed; // seconds per km
+  paceValue.textContent = fmtMinSec(paceSecPerKm);
+
+  if(piste && piste>0){
+    const lapSec = paceSecPerKm * (piste/1000);
+    lapValue.textContent = fmtMinSec(lapSec);
+    lapSub.textContent = `min : sec  (pour ${piste} m)`;
+
+    // cumulative laps table — number of laps derived automatically, either from
+    // total distance / lap distance, or from total duration / lap time
+    cumulTableBody.innerHTML = '';
+
+    if(cumulMode === 'distance'){
+      const distTotale = parseFloat(distTotaleInput.value);
+      if(distTotale && distTotale>0){
+        const nbTours = Math.ceil(distTotale / piste);
+        nbToursDisplay.value = nbTours + (nbTours>1?' tours':' tour');
+        let cumulSec = 0;
+        for(let i=1;i<=nbTours;i++){
+          const distCeTour = (i===nbTours && distTotale % piste !== 0) ? distTotale - piste*(i-1) : piste;
+          const lapSecReel = lapSec * (distCeTour/piste);
+          cumulSec += lapSecReel;
+          const cumulDist = Math.min(piste*i, distTotale);
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td style="font-weight:700">${i}</td>
+                          <td>${fmtMinSec(lapSecReel)}</td>
+                          <td style="font-weight:700">${fmtMinSec(cumulSec)}</td>
+                          <td>${cumulDist>=1000 ? (cumulDist/1000).toFixed(2)+' km' : cumulDist+' m'}</td>`;
+          cumulTableBody.appendChild(tr);
+        }
+      } else {
+        nbToursDisplay.value = '';
+      }
+    } else {
+      // mode durée
+      const dureeTotale = parseFloat(dureeTotaleInput.value);
+      if(dureeTotale && dureeTotale>0){
+        const nbToursComplets = Math.floor(dureeTotale / lapSec);
+        const resteSec = dureeTotale - nbToursComplets*lapSec;
+        const nbTours = resteSec>0.05 ? nbToursComplets+1 : nbToursComplets;
+        nbToursDisplay.value = nbTours + (nbTours>1?' tours':' tour');
+        let cumulSec = 0;
+        let cumulDist = 0;
+        for(let i=1;i<=nbTours;i++){
+          const isLastPartial = (i===nbTours && resteSec>0.05);
+          const lapSecReel = isLastPartial ? resteSec : lapSec;
+          cumulSec += lapSecReel;
+          cumulDist += piste * (lapSecReel/lapSec);
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td style="font-weight:700">${i}</td>
+                          <td>${fmtMinSec(lapSecReel)}</td>
+                          <td style="font-weight:700">${fmtMinSec(cumulSec)}</td>
+                          <td>${cumulDist>=1000 ? (cumulDist/1000).toFixed(2)+' km' : Math.round(cumulDist)+' m'}</td>`;
+          cumulTableBody.appendChild(tr);
+        }
+      } else {
+        nbToursDisplay.value = '';
+      }
+    }
+  } else {
+    lapValue.textContent='--:--';
+    lapSub.textContent='saisir la distance de la piste';
+    cumulTableBody.innerHTML='';
+  }
+
+  // reference table
+  refTableBody.innerHTML='';
+  [50,60,70,80,90,100,110].forEach(p=>{
+    const sp = vma*p/100;
+    const paceS = 3600/sp;
+    const lapS = piste ? paceS*(piste/1000) : null;
+    const tr = document.createElement('tr');
+    if(p===Math.round(pct)) tr.style.background='#fdf1ec';
+    tr.innerHTML = `<td style="font-weight:${p===Math.round(pct)?'700':'400'}">${p}%</td>
+                    <td>${sp.toFixed(1)} km/h</td>
+                    <td>${fmtMinSec(paceS)}</td>
+                    <td>${lapS? fmtMinSec(lapS): '—'}</td>`;
+    refTableBody.appendChild(tr);
+  });
+}
+
+/* init */
+updateClock();
+renderRunnerGrid();
+renderResultsTable();
+computeAllure();
+</script>
+
+</body>
+</html>
