@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Course de Durée — Chrono & Allure</title>
+
+<!-- PWA : installable + hors-ligne -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1F2A3C">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Course Durée">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -162,6 +173,7 @@
     <button class="tab-btn active" data-page="chrono">⏱ Chrono</button>
     <button class="tab-btn" data-page="allure">📐 Allure VMA</button>
   </nav>
+  <button id="installBtn" style="display:none; background:var(--track); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-weight:700; font-size:15px;">⬇ Installer l'app</button>
 </header>
 
 <main>
@@ -705,6 +717,41 @@ updateClock();
 renderRunnerGrid();
 renderResultsTable();
 computeAllure();
+
+/* ================= PWA : enregistrement du service worker ================= */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(err=>{
+      console.warn('Service worker non enregistré :', err);
+    });
+  });
+}
+
+/* ================= Bouton "Installer l'application" ================= */
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  const btn = document.getElementById('installBtn');
+  if(btn) btn.style.display = 'inline-flex';
+});
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  const btn = document.getElementById('installBtn');
+  if(btn){
+    btn.addEventListener('click', async ()=>{
+      if(!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      btn.style.display = 'none';
+    });
+  }
+});
+window.addEventListener('appinstalled', ()=>{
+  const btn = document.getElementById('installBtn');
+  if(btn) btn.style.display = 'none';
+});
 </script>
 
 </body>
